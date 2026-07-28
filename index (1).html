@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ledger — Sector Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #ECE7DC;
+    --paper-raised: #F4F0E6;
+    --ink: #1D2A26;
+    --ink-soft: #4A5652;
+    --navy: #223F52;
+    --gold: #B0812C;
+    --sage: #5F7A63;
+    --rust: #9B4A34;
+    --rule: #C8C0AC;
+    --rule-soft: #DAD4C4;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Faint ledger-line texture */
+  body::before{
+    content:"";
+    position: fixed;
+    inset:0;
+    pointer-events:none;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 37px,
+      rgba(34,63,82,0.05) 38px
+    );
+    z-index:0;
+  }
+
+  .wrap{ position:relative; z-index:1; max-width: 760px; margin: 0 auto; padding: 0 24px 120px; }
+
+  /* Masthead */
+  header.masthead{
+    padding: 56px 0 28px;
+    border-bottom: 3px double var(--ink);
+    margin-bottom: 40px;
+  }
+  .kicker{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin: 0 0 10px;
+  }
+  h1.title{
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: clamp(34px, 6vw, 52px);
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+  .byline{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+    display:flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .byline span::before{ content:"— "; color: var(--rule); }
+  .byline span:first-child::before{ content:""; }
+
+  .intro{
+    font-size: 15.5px;
+    color: var(--ink-soft);
+    max-width: 56ch;
+    margin-top: 18px;
+  }
+
+  /* Filter strip */
+  .filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom: 44px;
+  }
+  .filter-btn{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all .15s ease;
+  }
+  .filter-btn:hover{ border-color: var(--navy); color: var(--navy); }
+  .filter-btn.active{ background: var(--navy); border-color: var(--navy); color: var(--paper-raised); }
+
+  /* Entries */
+  .entry{
+    border-top: 1px solid var(--rule);
+    padding: 34px 0;
+  }
+  .entry:last-child{ border-bottom: 1px solid var(--rule); }
+
+  .entry-head{
+    display:flex;
+    align-items: baseline;
+    gap: 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .entry-no{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--rule);
+    min-width: 46px;
+  }
+  .entry-titleblock{ flex:1; }
+  .entry-meta{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-bottom: 6px;
+    display:flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items:center;
+  }
+  .entry-meta .date{ color: var(--ink-soft); }
+  .sector-tag{
+    background: rgba(95,122,99,0.14);
+    color: var(--sage);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .entry-title{
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--ink);
+    margin: 0;
+  }
+  .tickers{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    display:flex;
+    gap: 14px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .ticker{ display:flex; align-items:center; gap: 4px; }
+  .ticker .dir{ font-size: 12px; }
+  .dir.up{ color: var(--sage); }
+  .dir.down{ color: var(--rust); }
+  .dir.flat{ color: var(--gold); }
+
+  .chevron{
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--rule);
+    font-size: 18px;
+    transition: transform .2s ease;
+    align-self: center;
+  }
+  .entry.open .chevron{ transform: rotate(90deg); color: var(--navy); }
+
+  .entry-body{
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease;
+  }
+  .entry.open .entry-body{ max-height: 3000px; }
+
+  .entry-body-inner{ padding-top: 22px; }
+
+  .thesis{
+    font-size: 15.5px;
+    color: var(--ink);
+    padding: 14px 18px;
+    background: var(--paper-raised);
+    border-left: 3px solid var(--gold);
+    margin: 0 0 20px;
+  }
+  .thesis strong{ font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--gold); display:block; margin-bottom: 6px; }
+
+  table.metrics{
+    width:100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    margin-bottom: 22px;
+  }
+  table.metrics th{
+    text-align:left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+    padding: 6px 10px 6px 0;
+  }
+  table.metrics td{
+    padding: 8px 10px 8px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  table.metrics tr:last-child td{ border-bottom:none; }
+
+  .writeup{ font-size: 15px; color: var(--ink); }
+  .writeup p{ margin: 0 0 14px; }
+  .writeup h4{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--navy);
+    margin: 22px 0 8px;
+  }
+  .writeup ul{ padding-left: 20px; margin: 0 0 14px; }
+
+  .next-qs{
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--rule);
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+  .next-qs strong{ color: var(--rust); font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:6px; }
+
+  .empty-state{
+    padding: 60px 0;
+    text-align:center;
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+  }
+
+  footer{
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--rule);
+    text-align:center;
+    letter-spacing: .04em;
+  }
+
+  @media (max-width: 520px){
+    .entry-no{ display:none; }
+    h1.title{ font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="kicker">Vol. 1 · An ongoing record</p>
+    <h1 class="title">The Ledger</h1>
+    <div class="byline">
+      <span>Shreya Shah</span>
+      <span>BSc Economics, LSE</span>
+      <span id="entryCount">— entries</span>
+    </div>
+    <p class="intro">
+      A running notebook of sector research — one entry at a time, whenever there's an hour to spare.
+      Each note tracks a sector, the companies worth watching in it, and whether my read on it held up.
+    </p>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <main id="entries"></main>
+
+  <footer>Updated as I go — not a finished product, a working file.</footer>
+</div>
+
+<script src="entries.js"></script>
+<script>
+  function dirArrow(d){
+    if(d === 'up') return '<span class="dir up">▲</span>';
+    if(d === 'down') return '<span class="dir down">▼</span>';
+    return '<span class="dir flat">→</span>';
+  }
+
+  function renderEntries(list){
+    const container = document.getElementById('entries');
+    container.innerHTML = '';
+
+    if(list.length === 0){
+      container.innerHTML = '<div class="empty-state">No entries yet — the first one starts the ledger.</div>';
+      return;
+    }
+
+    list.forEach((e, idx) => {
+      const num = String(list.length - idx).padStart(3, '0');
+      const el = document.createElement('article');
+      el.className = 'entry';
+
+      const tickersHtml = (e.tickers || []).map(t =>
+        `<span class="ticker">${dirArrow(t.dir)} ${t.symbol}</span>`
+      ).join('');
+
+      const metricsRows = (e.metrics || []).map(m =>
+        `<tr><td>${m.label}</td><td>${m.value}</td></tr>`
+      ).join('');
+
+      el.innerHTML = `
+        <div class="entry-head" onclick="this.parentElement.classList.toggle('open')">
+          <div class="entry-no">No. ${num}</div>
+          <div class="entry-titleblock">
+            <div class="entry-meta">
+              <span class="date">${e.date}</span>
+              <span class="sector-tag">${e.sector}</span>
+            </div>
+            <h2 class="entry-title">${e.title}</h2>
+            <div class="tickers">${tickersHtml}</div>
+          </div>
+          <div class="chevron">›</div>
+        </div>
+        <div class="entry-body">
+          <div class="entry-body-inner">
+            <div class="thesis"><strong>The take</strong>${e.thesis}</div>
+            ${metricsRows ? `<table class="metrics"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>${metricsRows}</tbody></table>` : ''}
+            <div class="writeup">${e.writeup}</div>
+            ${e.openQuestions ? `<div class="next-qs"><strong>Still want to know</strong>${e.openQuestions}</div>` : ''}
+          </div>
+        </div>
+      `;
+      container.appendChild(el);
+    });
+  }
+
+  function renderFilters(list){
+    const sectors = ['All', ...new Set(list.map(e => e.sector))];
+    const container = document.getElementById('filters');
+    container.innerHTML = sectors.map((s, i) =>
+      `<button class="filter-btn ${i===0 ? 'active':''}" data-sector="${s}">${s}</button>`
+    ).join('');
+
+    container.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const sector = btn.dataset.sector;
+        const filtered = sector === 'All' ? list : list.filter(e => e.sector === sector);
+        renderEntries(filtered);
+      });
+    });
+  }
+
+  const sorted = [...entries].sort((a,b) => new Date(b.date) - new Date(a.date));
+  document.getElementById('entryCount').textContent = `${sorted.length} ${sorted.length === 1 ? 'entry' : 'entries'}`;
+  renderFilters(sorted);
+  renderEntries(sorted);
+</script>
+</body>
+</html>
